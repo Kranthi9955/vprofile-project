@@ -4,7 +4,7 @@
     <groupId>com.visualpathit</groupId>
     <artifactId>vprofile</artifactId>
     <packaging>war</packaging>
-    <version>v2</version>
+    <version>2.0</version>
     <name>Visualpathit VProfile Webapp</name>
     <url>http://maven.apache.org</url>
     <properties>
@@ -163,8 +163,21 @@
     </build>
 	<repositories>
     <repository>
-      <id>${NEXUS_GRP_REPO}</id>
-      <url>http://${NEXUS_IP}:${NEXUS_PORT}/repository/${NEXUS_GRP_REPO}/</url>
+        <id>vpro-maven-group</id>
+        <url>http://172.31.7.74:8081/repository/vpro-maven-group/</url>
     </repository>
-  </repositories>
-</project>
+</repositories>
+
+<distributionManagement>
+
+    <repository>
+        <id>vprofile-release</id>
+        <url>http://172.31.7.74:8081/repository/vprofile-release/</url>
+    </repository>
+
+    <snapshotRepository>
+        <id>vprofile-snapshot</id>
+        <url>http://172.31.7.74:8081/repository/vprofile-snapshot/</url>
+    </snapshotRepository>
+
+</distributionManagement>
