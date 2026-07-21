@@ -1,87 +1,68 @@
 pipeline {
     agent any
+
     tools {
-        maven "MAVEN3"
-        jdk "OracleJDK17"
+        maven 'MAVEN3'
+        jdk 'OracleJDK17'
     }
 
     environment {
-        SNAP_REPO = 'vprofile-snapshot'
-        NEXUS_USER = 'admin'
-        NEXUS_PASS = 'admin123'
+        SONAR_SERVER = 'sonarqube'
+        NEXUS_URL = '172.31.82.244:8081'
         RELEASE_REPO = 'vprofile-release'
-        CENTRAL_REPO = 'vpro-maven-central'
-        NEXUS_IP = '172.31.82.244'
-        NEXUS_PORT = '8081'
-        NEXUS_GRP_REPO = 'vpro-maven-group'
-        NEXUS_LOGIN = 'nexuslogin'
-        SONARSERVER = 'sonarserver'
-        SONARSCANNER = 'sonarscanner'
+        SNAPSHOT_REPO = 'vprofile-snapshot'
+        NEXUS_CREDENTIAL = 'nexuslogin'
     }
 
     stages {
-        stage('Build'){
+
+        stage('Checkout') {
             steps {
-                sh 'mvn -s settings.xml -DskipTests install'
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'mvn clean package -DskipTests'
             }
             post {
                 success {
-                    echo 'Archiving'
-                    archiveArtifacts artifacts: '**/*.war'
+                    archiveArtifacts artifacts: 'target/*.war'
                 }
             }
-            
         }
 
         stage('Test') {
             steps {
-                sh 'mvn -s settings.xml test'
+                sh 'mvn test'
             }
         }
 
-        stage('Checkstyle Analysis') {
+        stage('SonarQube Analysis') {
             steps {
-                sh 'mvn -s settings.xml checkstyle:checkstyle'
-            }
-        }
-
-        stage ('Sonar Analysis') {
-            environment {
-                scannerHome = tool "${SONARSCANNER}" 
-            }
-            steps {
-                withSonarQubeEnv("${SONARSERVER}") {
-                    sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=vprofile \
-                    -Dsonar.projectName=vprofile \
-                    -Dsonar.projectVersion=1.0 \
-                    -Dsonar.sources=src/ \
-                    -Dsonar.java.binaries=target/test-classes/com/visualpathit/account/controllerTest/ \
-                    -Dsonar.junit.reportsPath=target/surefire-reports/ \
-                    -Dsonar.jacoco.reportsPath=target/jacoco.exec \
-                    -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
+                withSonarQubeEnv("${SONAR_SERVER}") {
+                    sh '''
+                    mvn sonar:sonar \
+                      -Dsonar.projectKey=vprofile \
+                      -Dsonar.projectName=vprofile
+                    '''
                 }
             }
         }
 
-         stage ("Upload Artifact") {
+        stage('Quality Gate') {
             steps {
-                nexusArtifactUploader(
-                  nexusVersion: 'nexus3',
-                  protocol: 'http',
-                  nexusUrl: "${NEXUS_IP}:${NEXUS_PORT}",  
-                  groupId: 'QA',
-                  version: "${env.BUILD_ID}-${env.BUILD_TIMESTAMP}",
-                  repository: "${RELEASE_REPO}",
-                  credentialsId: "${NEXUS_LOGIN}", 
-                  artifacts: [
-                    [artifactId: 'vproapp',
-                     classifier: '',
-                     file: 'target/vprofile-v2.war',
-                     type: 'war']
-                  ]
-                )
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
             }
         }
-    
-    }        
+
+        stage('Deploy to Nexus') {
+            steps {
+                sh 'mvn deploy -DskipTests'
+            }
+        }
+    }
 }
