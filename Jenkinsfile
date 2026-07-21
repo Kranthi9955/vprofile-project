@@ -61,7 +61,7 @@ pipeline {
 
         stage('Deploy to Nexus') {
             steps {
-                sh 'mvn deploy -DskipTests'
+                sh 'mvn -s settings.xml deploy -DskipTests'
             }
         }
     }
