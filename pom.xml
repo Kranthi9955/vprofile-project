@@ -176,8 +176,11 @@
     </repository>
 
     <snapshotRepository>
+		
         <id>vprofile-snapshot</id>
         <url>http://172.31.7.74:8081/repository/vprofile-snapshot/</url>
     </snapshotRepository>
 
 </distributionManagement>
+
+</project>
